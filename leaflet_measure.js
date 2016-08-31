@@ -722,6 +722,7 @@
 
       options = options? L.setOptions(this, options): this.options;
       this.measureLayer = this._map.editTools.startMarker(undefined,options);
+      this._map._measuredLayer = this.measureLayer;
       this.eventsOn( 'editable:', this.editableEventTree, true);
       this.isDragging = false;
     },
@@ -841,6 +842,7 @@
     startMeasure: function (options) {
       options = options || this.options;
       this.measureLayer = this._map.editTools.startCircle(undefined, options);
+      this._map._measuredLayer = this.measureLayer;
       this.measureLayer.setRadius(-1);
       this.eventsOn( 'editable:', this.editableEventTree, true);
       this.create = false;
@@ -874,6 +876,7 @@
     startMeasure: function (options) {
       options = options? L.setOptions(this, options): this.options;
       this.measureLayer = this._map.editTools.startRectangle(undefined, options);
+      this._map._measuredLayer = this.measureLayer;
       this.eventsOn( 'editable:', this.editableEventTree, true);
       this.create = false;
       this.isDrawing = false;
@@ -949,12 +952,14 @@
           var latlng = drawingEditor.pop();
           if (latlng) {
             this.redoBuffer.push(latlng);
+            e.layer = map._measuredLayer;
             this._fireEvent(e, 'edit:vertex:delete');
           }
           break;
         case 89:  //Y
           if (this.redoBuffer.length) {
             drawingEditor.push(this.redoBuffer.pop());
+            e.layer = map._measuredLayer;
             this._fireEvent(e, 'create');
           }
           break;
@@ -1061,6 +1066,7 @@
     startMeasure: function (options) {
       options = options? L.setOptions(this, options): this.options;
       this.measureLayer = this._map.editTools.startPolyline(undefined, options);
+      this._map._measuredLayer = this.measureLayer;
       this.eventsOn( 'editable:', this.editableEventTree, true);
       this.redoBuffer = [];
       L.DomEvent.addListener(document, 'keydown', this._onKeyDown, map);
@@ -1095,6 +1101,7 @@
     startMeasure: function (options) {
       options = options? L.setOptions(this, options): this.options;
       this.measureLayer = this._map.editTools.startPolygon(undefined, options);
+      this._map._measuredLayer = this.measureLayer;
       this.isDragging = false;
       this.eventsOn( 'editable:', this.editableEventTree, true);
       this.redoBuffer = [];
