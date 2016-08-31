@@ -77,7 +77,7 @@ var map = L.map('map', {editable: true}).setView(startPoint, 16),
             }
         }
     };
-    L.DomEvent.addListener(document, 'keydown', onKeyDown, map);
+    L.DomEvent.addListener(document, 'keydown', onKeyDown, this);
     map.on('editable:drawing:end', function () {
         redoBuffer = [];
     });

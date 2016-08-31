@@ -12,12 +12,28 @@
       } else {
         this._layerGroup = map;
       }
+      this._setMouseMarker();
       this.markerTool = L.Measure.marker(map, options);
       this.circleTool = L.Measure.circle(map, options);
       this.rectangleTool = L.Measure.rectangle(map, options);
       this.polylineTool = L.Measure.polyline(map, options);
       this.polygonTool =  L.Measure.polygon(map, options);
     },
+
+
+    _setMouseMarker: function() {
+      if (map._mouseMarker === undefined) {
+        var tooltipOptions = {sticky: true, pane: 'popupPane', className:'leaflet-draw-tooltip'};
+        var imagePath = L.Measure.imagePath;
+        var popupMarkerIcon = L.icon({iconUrl:imagePath+'/popupMarker.png',iconSize: [1 , 1]});
+        map._mouseMarker = L.marker(map.getCenter());
+        map._mouseMarker.setIcon(popupMarkerIcon);
+        map._mouseMarker.addTo(this._map);
+        map._mouseMarker.bindTooltip('', tooltipOptions);
+      }
+    },
+
+
   });
 
  /*
@@ -79,19 +95,6 @@
     setPrecition: function(precision) {
       this.precision = precision;
     },
-
-    _setMouseMarker: function() {
-      if (map._mouseMarker === undefined) {
-        var tooltipOptions = {sticky: true, pane: 'popupPane', className:'leaflet-draw-tooltip'};
-        var imagePath = L.Measure.imagePath;
-        var popupMarkerIcon = L.icon({iconUrl:imagePath+'/popupMarker.png',iconSize: [1 , 1]});
-        map._mouseMarker = L.marker(map.getCenter());
-        map._mouseMarker.setIcon(popupMarkerIcon);
-        map._mouseMarker.addTo(this._map);
-        map._mouseMarker.bindTooltip('', tooltipOptions);
-      }
-    },
-
 
      _getLabelContent: function(layer, latlng) {
        return '';
@@ -706,7 +709,6 @@
      Инициализация режима перемщения маркера Marker
      */
     startMeasure: function(options) {
-      this._setMouseMarker();
       var imagePath = L.Measure.imagePath;
       this.options = { icon: L.icon({
         iconUrl: imagePath + '/marker-icon.png',
@@ -837,7 +839,6 @@
     },
 
     startMeasure: function (options) {
-      this._setMouseMarker();
       options = options || this.options;
       this.measureLayer = this._map.editTools.startCircle(undefined, options);
       this.measureLayer.setRadius(-1);
@@ -871,7 +872,6 @@
     },
 
     startMeasure: function (options) {
-      this._setMouseMarker();
       options = options? L.setOptions(this, options): this.options;
       this.measureLayer = this._map.editTools.startRectangle(undefined, options);
       this.eventsOn( 'editable:', this.editableEventTree, true);
@@ -933,9 +933,32 @@
           clicked: this._setClicked,
           commit: this._setCommit,
           mousedown: this._setMouseDown,
-          end: this.disable
+//           end: this.disable
         }
       };
+    },
+
+    redoBuffer: [],
+
+    _onKeyDown: function (e) {
+      if (!e.ctrlKey) return;
+      var drawingEditor = this._map.editTools._drawingEditor;
+      if (!drawingEditor) return;
+      switch (e.keyCode) {
+        case 90:  //Z
+          var latlng = drawingEditor.pop();
+          if (latlng) {
+            this.redoBuffer.push(latlng);
+            this._fireEvent(e, 'edit:vertex:delete');
+          }
+          break;
+        case 89:  //Y
+          if (this.redoBuffer.length) {
+            drawingEditor.push(this.redoBuffer.pop());
+            this._fireEvent(e, 'create');
+          }
+          break;
+      }
     },
 
     _setMove: function(e) {
@@ -986,7 +1009,7 @@
 
     setVertexDeleted: function(e) {
       this.vertexDeleted = true;
-      this._fireEvent(e, 'edit');
+      this._fireEvent(e, 'edit:vertex:delete');
       this._fireEvent(e, 'editend');
       this.vertexDeleted = false;
     },
@@ -1008,6 +1031,7 @@
 
     _setCommit: function(e) {
       this._closePopup();
+      this.redoBuffer = [];
       this._fireEvent(e, 'created');
     },
 
@@ -1035,10 +1059,11 @@
     },
 
     startMeasure: function (options) {
-      this._setMouseMarker();
       options = options? L.setOptions(this, options): this.options;
       this.measureLayer = this._map.editTools.startPolyline(undefined, options);
       this.eventsOn( 'editable:', this.editableEventTree, true);
+      this.redoBuffer = [];
+      L.DomEvent.addListener(document, 'keydown', this._onKeyDown, map);
       this.isDragging = false;
     },
 
@@ -1068,11 +1093,12 @@
 
 
     startMeasure: function (options) {
-      this._setMouseMarker();
       options = options? L.setOptions(this, options): this.options;
       this.measureLayer = this._map.editTools.startPolygon(undefined, options);
       this.isDragging = false;
       this.eventsOn( 'editable:', this.editableEventTree, true);
+      this.redoBuffer = [];
+      L.DomEvent.on(document, 'keydown', this._onKeyDown, this);
     },
 
   });
